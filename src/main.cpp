@@ -62,13 +62,14 @@
 #include <vector>
 
 #ifndef  prg_VERSION
-# define prg_VERSION "0.0.0"
+# define prg_VERSION "1.0.0"
 #endif
 
 namespace prg {
 
 using text  = std::string;
 using texts = std::vector<text>;
+using maybe_text = std::optional<text>;
 
 struct options
 {
@@ -95,7 +96,7 @@ auto filename( text path )
 
 text program_name = "[program-name]";
 
-auto process_options( texts in, options & opt ) -> std::optional<text>
+auto process_options( texts in, options & opt ) -> maybe_text
 {
     if ( opt.ignorecase )
         return {"option --ignorecase is not yet supported"};
@@ -113,18 +114,18 @@ auto process_options( texts in, options & opt ) -> std::optional<text>
 auto to_option( text arg )
 {
     return arg.substr(0,2) == "--"
-        ? std::optional<text>( arg.substr(2) )
+        ? maybe_text( arg.substr(2) )
         : ( arg[0] == '-' || arg[0] == '+' )
-            ? std::optional<text>( arg.substr(1) )
+            ? maybe_text( arg.substr(1) )
             : std::nullopt;
 } 
 
 auto to_value( text arg )
 {
-    return std::optional<text>( arg );
+    return maybe_text( arg );
 }
 
-auto split_option( text arg ) -> std::tuple<std::optional<text>, std::optional<text>>
+auto split_option( text arg ) -> std::tuple<maybe_text, maybe_text>
 {
     auto pos = arg.rfind( '=' );
 
@@ -143,23 +144,23 @@ auto split_arguments( texts args ) -> std::tuple<options, texts>
     {
         if ( in_options )
         {
-            std::optional<text> opt, val;
+            maybe_text opt, val;
             std::tie( opt, val ) = split_option( arg );
 
-            if      ( !opt                                      ) { in_options        = false;           }
-            else if ( *opt == ""                                ) { in_options        = false; continue; }
-            else if ( *opt == "h"       || "help"       == *opt ) { option.help       =  true; continue; }
-            else if ( *opt == "v"       || "verbose"    == *opt ) { option.verbose    =  true; continue; }
-            else if (                      "version"    == *opt ) { option.version    =  true; continue; }
-            else if ( *opt == "a"       || "author"     == *opt ) { option.author     =  true; continue; }
-            else if ( *opt == "f"       || "frequency"  == *opt ) { option.frequency  =  true; continue; }
-            else if ( *opt == "g"       || "ignorecase" == *opt ) { option.ignorecase =  true; continue; }
-            else if ( *opt == "l"       || "lowercase"  == *opt ) { option.lowercase  =  true; continue; }
-            else if ( *opt == "r"       || "reverse"    == *opt ) { option.reverse    =  true; continue; }
-            else if ( *opt == "s"       || "summary"    == *opt ) { option.summary    =  true; continue; }
-            else if ( *opt == "i"       || "input"      == *opt ) { option.input      =  *val; continue; }
-            else if ( *opt == "o"       || "output"     == *opt ) { option.output     =  *val; continue; }
-            else if ( *opt == "k"       || "keywords"   == *opt ) { option.keywords   =  *val; continue; }
+            if      ( !opt                                ) { in_options        = false;           }
+            else if ( *opt == ""                          ) { in_options        = false; continue; }
+            else if ( *opt == "h" || "help"       == *opt ) { option.help       =  true; continue; }
+            else if ( *opt == "v" || "verbose"    == *opt ) { option.verbose    =  true; continue; }
+            else if (                "version"    == *opt ) { option.version    =  true; continue; }
+            else if ( *opt == "a" || "author"     == *opt ) { option.author     =  true; continue; }
+            else if ( *opt == "f" || "frequency"  == *opt ) { option.frequency  =  true; continue; }
+            else if ( *opt == "g" || "ignorecase" == *opt ) { option.ignorecase =  true; continue; }
+            else if ( *opt == "l" || "lowercase"  == *opt ) { option.lowercase  =  true; continue; }
+            else if ( *opt == "r" || "reverse"    == *opt ) { option.reverse    =  true; continue; }
+            else if ( *opt == "s" || "summary"    == *opt ) { option.summary    =  true; continue; }
+            else if ( *opt == "i" || "input"      == *opt ) { option.input      =  *val; continue; }
+            else if ( *opt == "o" || "output"     == *opt ) { option.output     =  *val; continue; }
+            else if ( *opt == "k" || "keywords"   == *opt ) { option.keywords   =  *val; continue; }
             else throw std::runtime_error( "unrecognised option '" + text(arg) + "'" );
         }
         in.push_back( arg );
@@ -179,12 +180,12 @@ int usage( std::ostream & os )
       "Usage: " << program_name << " [option...] [file...]\n"
       "\n"
       "  -h, --help          display this help and exit\n"
-      "  -a, --author        report authors name and e-mail [no]\n"
+      "  -a, --author        report author's name and e-mail [no]\n"
       "      --version       report program and compiler versions [no]\n"
-      "  -v, --verbose       report ... [none]\n"
+      "  -v, --verbose       report on processing steps [none]\n"
       "\n"
       "  -f, --frequency     also report word frequency as d.dd% (n) [no]\n"
-//      "  -g, --ignorecase    handle upper and lowercase as being equivalent [no]\n"
+      "  -g, --ignorecase    handle upper and lowercase as being equivalent [not implemented][no]\n"
       "  -l, --lowercase     transform words to lowercase [no]\n"
       "  -r, --reverse       only collect keyword occurrences, see --keywords [no]\n"
       "  -s, --summary       also report number of (key)words and references [no]\n"
@@ -192,8 +193,8 @@ int usage( std::ostream & os )
       "  -i, --input=file    read filenames from given file [standard input or given filenames]\n"
       "  -o, --output=file   write output to given file [standard output]\n"
       "  -k, --keywords=file read keywords to skip (stopwords) from given file [none]\n"
-    //   "\n"
-    //   "Long options also may start with a plus, like: +help.\n"
+      "\n"
+      "Long options also may start with a plus, like: +help.\n"
       "\n" <<
       filename( program_name )  << " creates an alphabetically sorted index of words present in the\n"
       "input files and it reports the lines where those words occur.\n"
