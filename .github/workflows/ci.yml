@@ -1,16 +1,16 @@
 name: CI
 
 env:
-  PROJECT: SPAN_LITE
+  PROJECT: WordIndex
 
-on:
-  push:
-    branches: [ master ]
+# on:
+#   push:
+#     branches: [ master ]
 
-  pull_request:
-    branches: [ master ]
+#   pull_request:
+#     branches: [ master ]
 
-  workflow_dispatch:
+#   workflow_dispatch:
 
 jobs:
   gcc:
